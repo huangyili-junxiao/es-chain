@@ -1,0 +1,209 @@
+
+### ============================================================
+### ES-Chain 测试数据生成脚本
+### ES地址: http://es.ai.k8s:80 (从 .env 读取)
+### ============================================================
+
+### --------------------------------------------------
+### 步骤1: 删除旧索引（清理环境 - 如存在）
+### --------------------------------------------------
+DELETE http://es.ai.k8s:80/factory_sensors
+Accept: */*
+
+###
+DELETE http://es.ai.k8s:80/app_logs
+Accept: */*
+
+###
+DELETE http://es.ai.k8s:80/user_orders
+Accept: */*
+
+
+### --------------------------------------------------
+### 步骤2: 创建 factory_sensors 索引（IoT传感器数据）
+### 字段: sensor_id, zone, status, alert_type, temperature, vibration, pressure, message, timestamp
+### --------------------------------------------------
+PUT http://es.ai.k8s:80/factory_sensors
+Content-Type: application/json
+
+{
+  "mappings": {
+    "properties": {
+      "sensor_id": { "type": "keyword" },
+      "zone": { "type": "keyword" },
+      "status": { "type": "keyword" },
+      "alert_type": { "type": "keyword" },
+      "temperature": { "type": "float" },
+      "vibration": { "type": "float" },
+      "pressure": { "type": "float" },
+      "message": { "type": "text", "fields": { "keyword": { "type": "keyword", "ignore_above": 256 } } },
+      "timestamp": { "type": "date" }
+    }
+  }
+}
+
+### --------------------------------------------------
+### 步骤3: 创建 app_logs 索引（应用日志数据）
+### 字段: level, service, host, trace_id, message, error_code, duration_ms, timestamp
+### --------------------------------------------------
+PUT http://es.ai.k8s:80/app_logs
+Content-Type: application/json
+
+{
+  "mappings": {
+    "properties": {
+      "level": { "type": "keyword" },
+      "service": { "type": "keyword" },
+      "host": { "type": "keyword" },
+      "trace_id": { "type": "keyword" },
+      "message": { "type": "text", "fields": { "keyword": { "type": "keyword", "ignore_above": 256 } } },
+      "error_code": { "type": "keyword" },
+      "duration_ms": { "type": "integer" },
+      "timestamp": { "type": "date" }
+    }
+  }
+}
+
+### --------------------------------------------------
+### 步骤4: 创建 user_orders 索引（电商订单数据）
+### 字段: order_id, user_id, status, category, region, amount, quantity, product_name, created_at, paid_at
+### --------------------------------------------------
+PUT http://es.ai.k8s:80/user_orders
+Content-Type: application/json
+
+{
+  "mappings": {
+    "properties": {
+      "order_id": { "type": "keyword" },
+      "user_id": { "type": "keyword" },
+      "status": { "type": "keyword" },
+      "category": { "type": "keyword" },
+      "region": { "type": "keyword" },
+      "amount": { "type": "float" },
+      "quantity": { "type": "integer" },
+      "product_name": { "type": "text", "fields": { "keyword": { "type": "keyword", "ignore_above": 256 } } },
+      "created_at": { "type": "date" },
+      "paid_at": { "type": "date" }
+    }
+  }
+}
+
+### --------------------------------------------------
+### 步骤5: 批量插入 factory_sensors 数据
+### 场景说明:
+### - Zone_A: 2条 Critical + Overheat（目标数据）
+### - Zone_A: 1条 Warning + Overheat（边缘数据）
+### - Zone_A: 1条 Normal + Overheat（干扰数据-已恢复）
+### - Zone_A: 1条 Critical + Vibration（干扰数据-类型不符）
+### - Zone_B/C: 正常数据（背景噪音）
+### --------------------------------------------------
+POST http://es.ai.k8s:80/_bulk
+Content-Type: application/x-ndjson
+
+{ "index": { "_index": "factory_sensors" } }
+{ "sensor_id": "S-Zone_A-0001", "zone": "Zone_A", "status": "Critical", "alert_type": "Overheat", "temperature": 95.5, "vibration": 0.2, "pressure": 1.2, "message": "CRITICAL ALERT: Furnace temperature exceeded limit!", "timestamp": "2026-04-08T10:00:00Z" }
+{ "index": { "_index": "factory_sensors" } }
+{ "sensor_id": "S-Zone_A-0002", "zone": "Zone_A", "status": "Critical", "alert_type": "Overheat", "temperature": 92.1, "vibration": 0.3, "pressure": 1.1, "message": "CRITICAL ALERT: Temperature too high, immediate action required!", "timestamp": "2026-04-08T10:05:00Z" }
+{ "index": { "_index": "factory_sensors" } }
+{ "sensor_id": "S-Zone_A-0003", "zone": "Zone_A", "status": "Warning", "alert_type": "Overheat", "temperature": 85.0, "vibration": 0.1, "pressure": 1.0, "message": "WARNING: Temperature approaching limit", "timestamp": "2026-04-08T10:10:00Z" }
+{ "index": { "_index": "factory_sensors" } }
+{ "sensor_id": "S-Zone_A-0004", "zone": "Zone_A", "status": "Normal", "alert_type": "Overheat", "temperature": 65.5, "vibration": 0.1, "pressure": 1.0, "message": "Temperature normalized - auto recovery.", "timestamp": "2026-04-08T10:15:00Z" }
+{ "index": { "_index": "factory_sensors" } }
+{ "sensor_id": "S-Zone_A-0005", "zone": "Zone_A", "status": "Critical", "alert_type": "Vibration", "temperature": 70.0, "vibration": 8.5, "pressure": 1.2, "message": "CRITICAL ALERT: Motor vibration instability!", "timestamp": "2026-04-08T10:20:00Z" }
+{ "index": { "_index": "factory_sensors" } }
+{ "sensor_id": "S-Zone_B-0001", "zone": "Zone_B", "status": "Normal", "alert_type": "Pressure", "temperature": 68.0, "vibration": 0.2, "pressure": 1.0, "message": "Regular telemetry log from Zone B", "timestamp": "2026-04-08T10:00:00Z" }
+{ "index": { "_index": "factory_sensors" } }
+{ "sensor_id": "S-Zone_B-0002", "zone": "Zone_B", "status": "Warning", "alert_type": "Pressure", "temperature": 72.0, "vibration": 0.3, "pressure": 1.3, "message": "WARNING: Pressure slightly elevated", "timestamp": "2026-04-08T10:05:00Z" }
+{ "index": { "_index": "factory_sensors" } }
+{ "sensor_id": "S-Zone_B-0003", "zone": "Zone_B", "status": "Normal", "alert_type": "Pressure", "temperature": 69.5, "vibration": 0.2, "pressure": 1.0, "message": "Regular telemetry log from Zone B", "timestamp": "2026-04-08T10:10:00Z" }
+{ "index": { "_index": "factory_sensors" } }
+{ "sensor_id": "S-Zone_C-0001", "zone": "Zone_C", "status": "Normal", "alert_type": "Pressure", "temperature": 67.0, "vibration": 0.1, "pressure": 1.0, "message": "Regular telemetry log from Zone C", "timestamp": "2026-04-08T10:00:00Z" }
+{ "index": { "_index": "factory_sensors" } }
+{ "sensor_id": "S-Zone_C-0002", "zone": "Zone_C", "status": "Critical", "alert_type": "Overheat", "temperature": 90.0, "vibration": 0.4, "pressure": 1.1, "message": "CRITICAL ALERT: Zone C equipment overheating!", "timestamp": "2026-04-08T10:05:00Z" }
+
+
+### --------------------------------------------------
+### 步骤6: 批量插入 app_logs 数据
+### 场景说明:
+### - ERROR级别: 5条（分布在 order-service, user-service, inventory-service, payment-service）
+### - WARN级别: 2条
+### - INFO级别: 3条
+### --------------------------------------------------
+POST http://es.ai.k8s:80/_bulk
+Content-Type: application/x-ndjson
+
+{ "index": { "_index": "app_logs" } }
+{ "level": "ERROR", "service": "order-service", "host": "server-01", "trace_id": "trace-001", "message": "Database connection timeout", "error_code": "DB_TIMEOUT", "duration_ms": 5000, "timestamp": "2026-04-08T09:00:00Z" }
+{ "index": { "_index": "app_logs" } }
+{ "level": "ERROR", "service": "order-service", "host": "server-01", "trace_id": "trace-002", "message": "Failed to process payment", "error_code": "PAYMENT_FAILED", "duration_ms": 3200, "timestamp": "2026-04-08T09:15:00Z" }
+{ "index": { "_index": "app_logs" } }
+{ "level": "WARN", "service": "order-service", "host": "server-02", "trace_id": "trace-003", "message": "Slow query detected", "error_code": "SLOW_QUERY", "duration_ms": 2800, "timestamp": "2026-04-08T09:30:00Z" }
+{ "index": { "_index": "app_logs" } }
+{ "level": "INFO", "service": "user-service", "host": "server-03", "trace_id": "trace-004", "message": "User login successful", "error_code": null, "duration_ms": 150, "timestamp": "2026-04-08T09:00:00Z" }
+{ "index": { "_index": "app_logs" } }
+{ "level": "ERROR", "service": "user-service", "host": "server-03", "trace_id": "trace-005", "message": "Authentication failed for user", "error_code": "AUTH_FAIL", "duration_ms": 200, "timestamp": "2026-04-08T09:10:00Z" }
+{ "index": { "_index": "app_logs" } }
+{ "level": "INFO", "service": "inventory-service", "host": "server-04", "trace_id": "trace-006", "message": "Stock updated successfully", "error_code": null, "duration_ms": 80, "timestamp": "2026-04-08T09:00:00Z" }
+{ "index": { "_index": "app_logs" } }
+{ "level": "ERROR", "service": "inventory-service", "host": "server-04", "trace_id": "trace-007", "message": "Insufficient stock for product", "error_code": "OUT_OF_STOCK", "duration_ms": 120, "timestamp": "2026-04-08T09:20:00Z" }
+{ "index": { "_index": "app_logs" } }
+{ "level": "WARN", "service": "payment-service", "host": "server-05", "trace_id": "trace-008", "message": "Payment gateway latency high", "error_code": "GATEWAY_SLOW", "duration_ms": 3500, "timestamp": "2026-04-08T09:00:00Z" }
+{ "index": { "_index": "app_logs" } }
+{ "level": "ERROR", "service": "payment-service", "host": "server-05", "trace_id": "trace-009", "message": "Payment gateway unreachable", "error_code": "GATEWAY_DOWN", "duration_ms": 10000, "timestamp": "2026-04-08T09:05:00Z" }
+{ "index": { "_index": "app_logs" } }
+{ "level": "INFO", "service": "notification-service", "host": "server-06", "trace_id": "trace-010", "message": "Email sent successfully", "error_code": null, "duration_ms": 300, "timestamp": "2026-04-08T09:00:00Z" }
+
+
+### --------------------------------------------------
+### 步骤7: 批量插入 user_orders 数据
+### 场景说明:
+### - 完成订单: 6条
+### - 待处理订单: 2条
+### - 已取消订单: 1条
+### - 北京地区: 4条, 上海: 3条, 其他城市: 2条
+### --------------------------------------------------
+POST http://es.ai.k8s:80/_bulk
+Content-Type: application/x-ndjson
+
+{ "index": { "_index": "user_orders" } }
+{ "order_id": "ORD-2026-001", "user_id": "USER-1001", "status": "completed", "category": "electronics", "region": "Beijing", "amount": 5999.00, "quantity": 1, "product_name": "iPhone 16 Pro", "created_at": "2026-04-01T10:00:00Z", "paid_at": "2026-04-01T10:05:00Z" }
+{ "index": { "_index": "user_orders" } }
+{ "order_id": "ORD-2026-002", "user_id": "USER-1002", "status": "completed", "category": "electronics", "region": "Shanghai", "amount": 8999.00, "quantity": 1, "product_name": "MacBook Pro 14", "created_at": "2026-04-01T11:00:00Z", "paid_at": "2026-04-01T11:10:00Z" }
+{ "index": { "_index": "user_orders" } }
+{ "order_id": "ORD-2026-003", "user_id": "USER-1003", "status": "pending", "category": "clothing", "region": "Beijing", "amount": 299.50, "quantity": 2, "product_name": "Nike Running Shoes", "created_at": "2026-04-02T09:00:00Z", "paid_at": null }
+{ "index": { "_index": "user_orders" } }
+{ "order_id": "ORD-2026-004", "user_id": "USER-1001", "status": "cancelled", "category": "clothing", "region": "Guangzhou", "amount": 159.00, "quantity": 1, "product_name": "Adidas T-Shirt", "created_at": "2026-04-02T14:00:00Z", "paid_at": null }
+{ "index": { "_index": "user_orders" } }
+{ "order_id": "ORD-2026-005", "user_id": "USER-1004", "status": "completed", "category": "food", "region": "Shanghai", "amount": 128.00, "quantity": 5, "product_name": "Organic Fruit Box", "created_at": "2026-04-03T08:00:00Z", "paid_at": "2026-04-03T08:30:00Z" }
+{ "index": { "_index": "user_orders" } }
+{ "order_id": "ORD-2026-006", "user_id": "USER-1005", "status": "completed", "category": "electronics", "region": "Shenzhen", "amount": 3499.00, "quantity": 1, "product_name": "iPad Air", "created_at": "2026-04-03T16:00:00Z", "paid_at": "2026-04-03T16:05:00Z" }
+{ "index": { "_index": "user_orders" } }
+{ "order_id": "ORD-2026-007", "user_id": "USER-1002", "status": "completed", "category": "home", "region": "Beijing", "amount": 899.00, "quantity": 1, "product_name": "Dyson Vacuum", "created_at": "2026-04-04T10:00:00Z", "paid_at": "2026-04-04T10:15:00Z" }
+{ "index": { "_index": "user_orders" } }
+{ "order_id": "ORD-2026-008", "user_id": "USER-1006", "status": "pending", "category": "electronics", "region": "Shanghai", "amount": 12999.00, "quantity": 1, "product_name": "MacBook Pro 16", "created_at": "2026-04-04T13:00:00Z", "paid_at": null }
+{ "index": { "_index": "user_orders" } }
+{ "order_id": "ORD-2026-009", "user_id": "USER-1007", "status": "completed", "category": "clothing", "region": "Chengdu", "amount": 599.00, "quantity": 3, "product_name": "Winter Jacket", "created_at": "2026-04-05T09:00:00Z", "paid_at": "2026-04-05T09:10:00Z" }
+{ "index": { "_index": "user_orders" } }
+{ "order_id": "ORD-2026-010", "user_id": "USER-1003", "status": "completed", "category": "food", "region": "Beijing", "amount": 256.00, "quantity": 2, "product_name": "Premium Tea Set", "created_at": "2026-04-05T15:00:00Z", "paid_at": "2026-04-05T15:20:00Z" }
+
+
+### --------------------------------------------------
+### 步骤8: 验证数据导入结果
+### --------------------------------------------------
+GET http://es.ai.k8s:80/factory_sensors,app_logs,user_orders/_stats/docs
+Accept: */*
+
+### --------------------------------------------------
+### 步骤9: 查看各索引Mapping（供DSL生成参考）
+### --------------------------------------------------
+###
+GET http://es.ai.k8s:80/factory_sensors/_mapping
+Accept: */*
+
+###
+GET http://es.ai.k8s:80/app_logs/_mapping
+Accept: */*
+
+###
+GET http://es.ai.k8s:80/user_orders/_mapping
+Accept: */*

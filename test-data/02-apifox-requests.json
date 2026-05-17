@@ -1,0 +1,252 @@
+{
+  "info": {
+    "name": "ES-Chain API 测试集",
+    "description": "es-chain 服务 API 测试请求集合",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "健康检查",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8004/health",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8004",
+          "path": ["health"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "获取索引列表",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8004/indices",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8004",
+          "path": ["indices"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "获取索引 Mapping",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8004/mapping/factory_sensors",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8004",
+          "path": ["mapping", "factory_sensors"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "【核心】自然语言查询 - 工厂传感器",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"A区的高温报警\",\n  \"request_id\": \"test-factory-001\",\n  \"options\": {\n    \"timeoutMs\": 10000,\n    \"maxResults\": 10\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8004/query",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8004",
+          "path": ["query"]
+        },
+        "description": "预期命中: Zone_A + Critical + Overheat = 2条"
+      },
+      "response": []
+    },
+    {
+      "name": "【核心】自然语言查询 - 错误日志",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"最近有什么错误日志\",\n  \"request_id\": \"test-logs-001\",\n  \"options\": {\n    \"timeoutMs\": 10000,\n    \"maxResults\": 10\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8004/query",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8004",
+          "path": ["query"]
+        },
+        "description": "预期命中: level=ERROR = 5条"
+      },
+      "response": []
+    },
+    {
+      "name": "【核心】自然语言查询 - 订单统计",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"北京地区的已完成订单\",\n  \"request_id\": \"test-orders-001\",\n  \"options\": {\n    \"timeoutMs\": 10000,\n    \"maxResults\": 10\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8004/query",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8004",
+          "path": ["query"]
+        },
+        "description": "预期命中: region=Beijing + status=completed = 3条"
+      },
+      "response": []
+    },
+    {
+      "name": "自然语言查询 - 复杂聚合",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"每个服务的错误数量统计\",\n  \"request_id\": \"test-agg-001\",\n  \"options\": {\n    \"timeoutMs\": 10000,\n    \"maxResults\": 0\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8004/query",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8004",
+          "path": ["query"]
+        },
+        "description": "预期返回聚合结果，展示各服务的错误数量分布"
+      },
+      "response": []
+    },
+    {
+      "name": "直接执行 DSL（调试用）",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"index\": \"factory_sensors\",\n  \"dsl\": {\n    \"query\": {\n      \"bool\": {\n        \"must\": [\n          { \"term\": { \"zone\": \"Zone_A\" } },\n          { \"term\": { \"status\": \"Critical\" } },\n          { \"term\": { \"alert_type\": \"Overheat\" } }\n        ]\n      }\n    },\n    \"size\": 10\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8004/dsl",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8004",
+          "path": ["dsl"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "DSL 验证接口",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"index\": \"factory_sensors\",\n  \"dsl\": {\n    \"query\": {\n      \"term\": { \"zone\": \"Zone_A\" }\n    },\n    \"size\": 10\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8004/validate",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8004",
+          "path": ["validate"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "错误请求 - 空问题",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"\",\n  \"request_id\": \"test-error-001\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8004/query",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8004",
+          "path": ["query"]
+        },
+        "description": "测试参数校验: 空问题应该返回错误"
+      },
+      "response": []
+    },
+    {
+      "name": "错误请求 - 不存在的索引",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"查询不存在的表中的数据\",\n  \"request_id\": \"test-error-002\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8004/query",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8004",
+          "path": ["query"]
+        },
+        "description": "测试索引不存在的情况"
+      },
+      "response": []
+    }
+  ]
+}

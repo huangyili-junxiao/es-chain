@@ -1,0 +1,29 @@
+server:
+  port: 8004
+
+spring:
+  application:
+    name: es-chain
+
+# === 自定义配置映射 (这是核心) ===
+# 我们定义一个统一的结构，让 Java 代码读取这个结构
+# ${ES_HOST:localhost} 优先读 .env 的 ES_HOST，读不到用 localhost
+app:
+  es:
+    host: ${ES_HOST:localhost}
+    port: ${ES_PORT:9200}
+    scheme: ${ES_SCHEME:http}
+    connection-timeout: 5000
+    socket-timeout: 30000
+  
+  llm:
+    api-key: ${LLM_API_KEY:}
+    base-url: ${LLM_BASE_URL:https://openrouter.ai/api/v1}
+    model: ${LLM_MODEL:qwen/qwen3-max}
+    timeout: ${LLM_TIMEOUT:60000}
+
+# === 下面是日志配置，保留 ===
+logging:
+  level:
+    root: INFO
+    com.topview: DEBUG
